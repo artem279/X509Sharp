@@ -44,9 +44,9 @@ namespace cert_parser
 		public ArrayList FromBase64(string sign)
 		{
 	    	
-	    	ArrayList result = new ArrayList();
+	    		ArrayList result = new ArrayList();
 			byte[] encodedData;
-	    	encodedData = Convert.FromBase64String(sign);
+	    		encodedData = Convert.FromBase64String(sign);
 			X509Certificate2 cert = new X509Certificate2(encodedData);
 			result.Add(cert.Issuer);
 			result.Add(cert.Subject);
@@ -54,7 +54,7 @@ namespace cert_parser
 			result.Add(cert.NotAfter);
 			result.Add(cert.Thumbprint);
 			result.Add(cert.SerialNumber);
-	    	return result;
+	    		return result;
 		}
 		
 		
