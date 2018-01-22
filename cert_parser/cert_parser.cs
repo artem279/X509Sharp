@@ -101,7 +101,7 @@ namespace cert_parser
 					else if (p.Contains("SN=")) {CNuser = p.Replace("SN=","").Trim()+" "+CNuser;}
 					else if (p.Contains("G=")) {CNuser += p.Replace("G=","").Trim();}
 					else if (p.Contains("CN=")) {CNholder = p.Replace("CN=","").Trim();}
-					else if (p.Contains("OU=")) {Department = p.Replace("OU=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
+					else if (p.Contains("OU=")) {Department += p.Replace("OU=","").Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","").Trim()+" ";}
 					else if (p.Contains("S=")) {region = p.Replace("S=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 					else if (p.Contains("L=")) {City = p.Replace("L=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 					else if ((p.Contains("ИНН=")|p.Contains("INN=")) && String.IsNullOrEmpty(INN)) {try {int len = p.Length;} catch {INN = "";} if (p.Length > 4) {INN = p.Replace("ИНН=","").Replace("INN=","").Trim();}}
@@ -114,7 +114,7 @@ namespace cert_parser
 					else if (p.Contains("T=") && !p.Contains("ET=")) {Dolgnost = p.Replace("T=","").Trim();}
 					else if (p.Contains("E=")) {EmailHolder = p.Replace("E=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 				}
-				
+				Department = Department.Trim();
 				DateSince = data[2].ToString();
 				DateExpiration = data[3].ToString();
 				CertHash = data[4].ToString();
