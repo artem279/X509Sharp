@@ -114,7 +114,7 @@ namespace cert_parser
 					else if (p.Contains("T=") && !p.Contains("ET=")) {Dolgnost = p.Replace("T=","").Trim();}
 					else if (p.Contains("E=")) {EmailHolder = p.Replace("E=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 				}
-				Department = Department.Trim();
+				try { Department = Department.Trim(); } catch { Department = null; }
 				DateSince = data[2].ToString();
 				DateExpiration = data[3].ToString();
 				CertHash = data[4].ToString();
