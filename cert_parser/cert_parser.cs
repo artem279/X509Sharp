@@ -109,8 +109,8 @@ namespace cert_parser
 					else if (p.Contains("ОГРН=")  && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
 					else if (p.Contains("OGRN=") && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
 					else if (p.Contains("ОГРНИП") && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
-					//else if (p.Contains("SNILS=")) {SNILS = p.Replace("SNILS=","").Trim();}
-					//else if (p.Contains("СНИЛС=")) {SNILS = p.Replace("СНИЛС=","").Trim();}
+					else if (p.Contains("SNILS=") && String.IsNullOrEmpty(OGRN)) {SNILS = p.Replace("SNILS=","").Replace("СНИЛС=","").Trim();}
+					else if (p.Contains("СНИЛС=") && String.IsNullOrEmpty(OGRN)) {SNILS = p.Replace("СНИЛС=","").Replace("SNILS=","").Trim();}
 					else if (p.Contains("T=") && !p.Contains("ET=")) {Dolgnost = p.Replace("T=","").Trim();}
 					else if (p.Contains("E=")) {EmailHolder = p.Replace("E=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 				}
