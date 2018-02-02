@@ -11,7 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace cert_parser
 {
@@ -19,7 +19,7 @@ namespace cert_parser
 	/// Description of UserControl1.
 	/// </summary>
 	/// 
-	[ComVisible(true)]
+
 	public partial class CertInfo
 	{
 		public string INN {get; set;}
@@ -28,6 +28,7 @@ namespace cert_parser
 		public string OGRN2 {get; set;}
 		public string SNILS {get; set;}
 		public string CertHash {get; set;}
+		//Common name of issuer
 		public string CNuc {get; set;}
 		public string CNholder {get; set;}
 		public string CNuser {get; set;}
@@ -35,18 +36,20 @@ namespace cert_parser
 		public string Department {get; set;}
 		public string region {get; set;}
 		public string City {get; set;}
+		public string Street {get; set;}
 		public string EmailHolder {get; set; }
 		public string DateSince {get; set;}
 		public string DateExpiration {get; set;}
 		public string SerialNumber {get; set;}
+		//Base64 string
+		public string sign {get; set;}
 		
-		[ComVisible(true)]
 		public ArrayList FromBase64(string sign)
 		{
 	    	
-	    		ArrayList result = new ArrayList();
+	    	ArrayList result = new ArrayList();
 			byte[] encodedData;
-	    		encodedData = Convert.FromBase64String(sign);
+	    	encodedData = Convert.FromBase64String(sign);
 			X509Certificate2 cert = new X509Certificate2(encodedData);
 			result.Add(cert.Issuer);
 			result.Add(cert.Subject);
@@ -54,76 +57,105 @@ namespace cert_parser
 			result.Add(cert.NotAfter);
 			result.Add(cert.Thumbprint);
 			result.Add(cert.SerialNumber);
-	    		return result;
+	    	return result;
 		}
 		
 		
-		[ComVisible(true)]
-		public void Subject (ArrayList data)
+		public ArrayList FromCertificate(string file)
 		{
+	    	
+	    	ArrayList result = new ArrayList();
+			X509Certificate2 cert = new X509Certificate2(file);
+			result.Add(cert.Issuer);
+			result.Add(cert.Subject);
+			result.Add(cert.NotBefore);
+			result.Add(cert.NotAfter);
+			result.Add(cert.Thumbprint);
+			result.Add(cert.SerialNumber);
+	    	return result;
+		}
+		
+		public string strip(string inputstring)
+		{
+			return inputstring.Replace(";",",").Replace("\\", "").Replace("|", "/").Replace("\"", "").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Trim().TrimStart(new char[] {','}).TrimEnd(new char[] {','});
+		}
+		
+		
+		public void ParseData (ArrayList data)
+		{
+			//subject or issuer regexp
+			Regex regexp = new Regex("([A-zА-я0-9\\.]*=)",RegexOptions.IgnoreCase);
+			//OID regexp for requisites
+			Regex oid_orgrequisites = new Regex("(OID)[.0-9]+=([A-zА-я\\=])*([0-9]{10,14})(\\/|\\-)?([A-zА-я\\=])*([0-9]{9})?(\\/|\\-)?([A-zА-я\\=])*([0-9]{15}|[0-9]{13}|[0-9]{11})?",RegexOptions.IgnoreCase);
 
-			string [] parts = null;
-				
-				parts = data[0].ToString().Split(',');
-
-				foreach(string p in parts)
-				{
-					
-					if(p.Contains("CN="))
-					{CNuc = p.Replace("CN=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
-
+			string [] issuer_matches = regexp.Split(data[0].ToString());
+			var issuer = (from e in issuer_matches where strip(e) != "" select strip(e)).ToList();
+			
+			//Разбираем данные УЦ
+			for(int i = 0; i < issuer.Count; i++)
+			{
+				if (issuer[i].Contains("CN=")) {CNuc = issuer[i+1];}
+			}
+			
+			string [] subject_matches = regexp.Split(data[1].ToString());
+			var subject = (from e in subject_matches where strip(e) != "" select strip(e)).ToList();
+			//(OID)[.0-9]+=([A-zА-я\=])*([0-9]{10,14})(\/|\-)?([A-zА-я\=])*([0-9]{9})?(\/|\-)?([A-zА-я\=])*([0-9]{15}|[0-9]{13}|[0-9]{11})?
+			//Для красивой склейки орг. структуры
+			List<string> department_list = new List<string>();
+			
+			//Подстраховка для реквизитов орг-ции (субъекта)
+			MatchCollection matches = oid_orgrequisites.Matches(strip(data[1].ToString()));
+			foreach(Match match in matches)
+			{
+				string [] oid_matches = regexp.Split(match.Value);
+				var subject_oid = (from e in oid_matches where strip(e).Replace("/", "") != "" select strip(e).Replace("/", "")).ToList();
+				for(int i = 0; i < subject_oid.Count; i++)
+				{	
+					if ((subject_oid[i].Contains("INN=") | subject_oid[i].Contains("ИНН=")) && String.IsNullOrEmpty(INN)) {	INN = subject_oid[i+1]; }
+					else if ((subject_oid[i].Contains("KPP=") | subject_oid[i].Contains("КПП=")) && String.IsNullOrEmpty(KPP)) { KPP = subject_oid[i+1]; }
+					else if ((subject_oid[i].Contains("OGRN=") | subject_oid[i].Contains("OGRNIP=") | subject_oid[i].Contains("ОГРН=") | subject_oid[i].Contains("ОГРНИП=")) && String.IsNullOrEmpty(OGRN)) { OGRN = subject_oid[i+1]; }
 				}
-				
-				parts = null;
-				
-				parts = data[1].ToString().Split(',');
-				
-				foreach(string p in parts)
+			}
+			
+			//Разбираем данные субъекта
+			for(int i = 0; i < subject.Count; i++)
+			{
+				if ((subject[i].Contains("INN=") | subject[i].Contains("ИНН=")) && String.IsNullOrEmpty(INN)) {	INN = subject[i+1]; }
+				else if ((subject[i].Contains("KPP=") | subject[i].Contains("КПП=")) && String.IsNullOrEmpty(KPP)) { KPP = subject[i+1]; }
+				else if ((subject[i].Contains("OGRN=") | subject[i].Contains("OGRNIP=") | subject[i].Contains("ОГРН=") | subject[i].Contains("ОГРНИП=")) && String.IsNullOrEmpty(OGRN)) { OGRN = subject[i+1]; }
+				else if ((subject[i].Contains("SNILS=") | subject[i].Contains("СНИЛС=")) && String.IsNullOrEmpty(SNILS)) { SNILS = subject[i+1]; }
+				else if (subject[i].Contains("street=")|subject[i].Contains("STREET="))	{ Street = subject[i+1]; }
+				//Фамилия
+				else if (subject[i].Contains("SN=")) {CNuser = subject[i+1]+" "+CNuser;}
+				//Имя и Отчество
+				else if (subject[i].Contains("G=")) {CNuser += subject[i+1];}
+				//Владелец сертфииката (может быть юр. лицо!).
+				else if (subject[i].Contains("CN=")) {CNholder = subject[i+1];}
+				//Орг. структура
+				else if (subject[i].Contains("OU="))
 				{
-					
-					if(p.Contains("OID"))
+					if (!department_list.Contains(strip(subject[i+1])))
 					{
-						string[] OID = p.Trim().Replace("OID.1.2.840.113549.1.9.2=","").Replace("OID.1.2.643.3.131.1.1=","").Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("-","/").Replace("\"","").Replace("\\","/").Split('/');
-						Regex regex = new Regex("(OID)[.0-9]+=([0-9]{10}|[0-9]{12})-([0-9]{9})?[-]?",RegexOptions.IgnoreCase);
-						MatchCollection matches = regex.Matches(p);
-						foreach(Match match in matches)
-						{
-							string[] estOID = match.Value.Trim().Replace("OID.1.2.840.113549.1.9.2=","").Replace("OID.1.2.643.3.131.1.1=","").Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("-","/").Replace("\"","").Replace("\\","/").Split('/');
-							try { INN = estOID[0].Replace("INN=","").Replace("ИНН=","").Trim(); } catch{INN = "";}
-							try { KPP = estOID[1].Replace("KPP=","").Replace("КПП=","").Trim(); } catch{KPP = "";}
-						}
-						try { if ((OID[0].Contains("ИНН") | OID[0].Contains("INN")) && String.IsNullOrEmpty(INN)) { INN = OID[0].Replace("INN=","").Replace("ИНН=","").Trim(); } } catch{INN = "";}
-						try { if ((OID[1].Contains("КПП") | OID[1].Contains("KPP")) && String.IsNullOrEmpty(KPP)) { KPP = OID[1].Replace("KPP=","").Replace("КПП=","").Trim(); } } catch{KPP = "";}
-						try { if(OID[2].Contains("ОГРН") | OID[2].Contains("OGRN") | OID[2].Contains("OGRNIP") | OID[2].Contains("ОГРНИП")) { OGRN = OID[2].Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim(); } } catch{OGRN = "";}
-						
+						department_list.Add(strip(subject[i+1]));
 					}
-					
-					else if (p.Contains("SN=")) {CNuser = p.Replace("SN=","").Trim()+" "+CNuser;}
-					else if (p.Contains("G=")) {CNuser += p.Replace("G=","").Trim();}
-					else if (p.Contains("CN=")) {CNholder = p.Replace("CN=","").Trim();}
-					else if (p.Contains("OU=")) {Department += p.Replace("OU=","").Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","").Trim()+" ";}
-					else if (p.Contains("S=")) {region = p.Replace("S=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
-					else if (p.Contains("L=")) {City = p.Replace("L=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
-					else if ((p.Contains("ИНН=")|p.Contains("INN=")) && String.IsNullOrEmpty(INN)) {try {int len = p.Length;} catch {INN = "";} if (p.Length > 4) {INN = p.Replace("ИНН=","").Replace("INN=","").Trim();}}
-					else if ((p.Contains("КПП=")|p.Contains("KPP="))  && String.IsNullOrEmpty(KPP)) {try {int len = p.Length;} catch {KPP = "";} if (p.Length > 4) {KPP = p.Replace("КПП=","").Replace("KPP=","").Trim();}}
-					else if (p.Contains("ОГРН=")  && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
-					else if (p.Contains("OGRN=") && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
-					else if (p.Contains("ОГРНИП") && String.IsNullOrEmpty(OGRN)) {OGRN2 = p.Replace("OGRN=","").Replace("ОГРН=","").Replace("OGRNIP","").Replace("ОГРНИП","").Trim();}
-					else if (p.Contains("SNILS=") && String.IsNullOrEmpty(OGRN)) {SNILS = p.Replace("SNILS=","").Replace("СНИЛС=","").Trim();}
-					else if (p.Contains("СНИЛС=") && String.IsNullOrEmpty(OGRN)) {SNILS = p.Replace("СНИЛС=","").Replace("SNILS=","").Trim();}
-					else if (p.Contains("T=") && !p.Contains("ET=")) {Dolgnost = p.Replace("T=","").Trim();}
-					else if (p.Contains("E=")) {EmailHolder = p.Replace("E=","").Trim().Replace(";"," ").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Replace("\"","");}
 				}
-				try { Department = Department.Trim(); } catch { Department = null; }
-				DateSince = data[2].ToString();
-				DateExpiration = data[3].ToString();
-				CertHash = data[4].ToString();
-				SerialNumber = data[5].ToString();
+				else if (subject[i].Contains("S=")) {region = subject[i+1];}
+				else if (subject[i].Contains("L=")) {City = subject[i+1];}
+				else if (subject[i].Contains("T=")) {Dolgnost = subject[i+1];}
+				else if (subject[i].Contains("E=")) {EmailHolder = subject[i+1];}
+				
+			}
+			
+			Department = String.Join("; ", department_list);
+			DateSince = data[2].ToString();
+			DateExpiration = data[3].ToString();
+			CertHash = data[4].ToString();
+			SerialNumber = data[5].ToString();
 				
 		}
 		
-		[ComVisible(true)]
-		public static List<CertInfo> HolderInfo(string path)
+
+		public static List<CertInfo> CertificateInfo(string path)
 	    {
 			List<CertInfo> certinfo = new List<CertInfo>();
 	    	string sign = null;
@@ -131,10 +163,8 @@ namespace cert_parser
 	    	foreach(string f in Directory.GetFiles(path))
 			{
 				sign = File.ReadAllText(f);
-				
 				cert = new CertInfo();
-				//cert.file = f;
-				cert.Subject(cert.FromBase64(sign));
+				cert.ParseData(cert.FromBase64(sign));
 				certinfo.Add(cert);
 			}
 	    	
@@ -143,6 +173,55 @@ namespace cert_parser
 		
 		}
 		
+
+		public static List<CertInfo> CertificateInfo(string xmlfile, string tagname)
+	    {
+	    	
+	    	List<CertInfo> certinfo = new List<CertInfo>();
+    		FileInfo finfo = new FileInfo(xmlfile);
+   			if(finfo.Extension == ".xml")
+   			{
+				XDocument doc = XDocument.Load(xmlfile);
+				
+				foreach (XElement row in doc.Root.Descendants(tagname))
+				{
+					CertInfo cert = new CertInfo();
+					
+					try
+					{
+						cert.sign = row.Value.Trim();
+						cert.ParseData(cert.FromBase64(cert.sign));
+					}
+					catch
+					{
+						Console.WriteLine("Certificate is not exist!");
+						continue;
+					}
+					
+					certinfo.Add(cert);
+					
+				}
+				
+   			}
+				
+    		return certinfo;
+	    	
+	    }
+		
+		public static CertInfo CertificateInfoFromCerFile(string certfile)
+	    {
+	    	
+    		FileInfo finfo = new FileInfo(certfile);
+    		CertInfo cert = null;
+   			if(finfo.Extension == ".cer")
+   			{
+   				cert = new CertInfo();
+   				cert.ParseData(cert.FromCertificate(certfile));
+   			}
+				
+    		return cert;
+	    	
+	    }
 		
 	}
 }
