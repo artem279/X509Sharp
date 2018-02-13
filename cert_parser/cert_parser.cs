@@ -1,10 +1,4 @@
-﻿/*
- * Создано в SharpDevelop.
- * Пользователь: artem279
- * Дата: 17.10.2017
- * Время: 10:50
- */
-using System;
+﻿using System;
 using System.Collections;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -16,7 +10,7 @@ using System.Xml.Linq;
 namespace cert_parser
 {
 	/// <summary>
-	/// Description of UserControl1.
+	/// Библиотека для разбора сертификатов
 	/// </summary>
 	/// 
 
@@ -44,6 +38,11 @@ namespace cert_parser
 		//Base64 string
 		public string sign {get; set;}
 		
+		/// <summary>
+		/// Преобразует строку base64 в массив ArrayList
+		/// </summary>
+		/// <param name="sign"></param>
+		/// <returns></returns>
 		public ArrayList FromBase64(string sign)
 		{
 	    	
@@ -60,7 +59,11 @@ namespace cert_parser
 	    	return result;
 		}
 		
-		
+		/// <summary>
+		/// Разбирает файл сертификата и отдаёт массив ArrayList
+		/// </summary>
+		/// <param name="file"></param>
+		/// <returns></returns>
 		public ArrayList FromCertificate(string file)
 		{
 	    	
@@ -80,7 +83,10 @@ namespace cert_parser
 			return inputstring.Replace(";",",").Replace("\\", "").Replace("|", "/").Replace("\"", "").Replace("\n"," ").Replace("\t", " ").Replace("NULL","").Trim().TrimStart(new char[] {','}).TrimEnd(new char[] {','});
 		}
 		
-		
+		/// <summary>
+		/// Процедура обработки данных сертификата
+		/// </summary>
+		/// <param name="data">ArrayList</param>
 		public void ParseData (ArrayList data)
 		{
 			//subject or issuer regexp
@@ -154,7 +160,11 @@ namespace cert_parser
 				
 		}
 		
-
+		/// <summary>
+		/// Функция обработки контейнеров сертификатов из текстовых файлов (base64) 
+		/// </summary>
+		/// <param name="path">сканируемый каталог</param>
+		/// <returns></returns>
 		public static List<CertInfo> CertificateInfo(string path)
 	    {
 			List<CertInfo> certinfo = new List<CertInfo>();
@@ -174,6 +184,12 @@ namespace cert_parser
 		}
 		
 
+		/// <summary>
+		/// Функция обработки контейнеров сертификатов из xml
+		/// </summary>
+		/// <param name="xmlfile">полный путь до xml</param>
+		/// <param name="tagname">название тега, по которому будет вестись поиск</param>
+		/// <returns>List of CertInfo</returns>
 		public static List<CertInfo> CertificateInfo(string xmlfile, string tagname)
 	    {
 	    	
@@ -199,15 +215,20 @@ namespace cert_parser
 					}
 					
 					certinfo.Add(cert);
-					
+
 				}
-				
+
    			}
-				
+
     		return certinfo;
-	    	
+
 	    }
 		
+		/// <summary>
+		/// Функция обработки сертификатов (*.cer)
+		/// </summary>
+		/// <param name="certfile">Путь до файла сертификата</param>
+		/// <returns>CertInfo</returns>
 		public static CertInfo CertificateInfoFromCerFile(string certfile)
 	    {
 	    	
@@ -218,7 +239,7 @@ namespace cert_parser
    				cert = new CertInfo();
    				cert.ParseData(cert.FromCertificate(certfile));
    			}
-				
+
     		return cert;
 	    	
 	    }
