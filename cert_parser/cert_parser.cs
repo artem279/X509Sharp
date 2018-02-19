@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * Создано в SharpDevelop.
+ * Пользователь: artem279
+ * Дата: 17.10.2017
+ * Время: 10:50
+ */
+using System;
 using System.Collections;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
